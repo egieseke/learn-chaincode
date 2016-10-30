@@ -27,9 +27,11 @@ import (
 	"time"
 
 	"github.com/hyperledger/fabric/core/chaincode/shim"
+	"github.com/satori/go.uuid"
 )
 
 var cpPrefix = "cp:"
+var coffeeAssetPrefix = "coffee:"
 var accountPrefix = "acct:"
 var accountsKey = "accounts"
 
@@ -85,6 +87,14 @@ type CP struct {
 	Owners    []Owner `json:"owner"`
 	Issuer    string  `json:"issuer"`
 	IssueDate string  `json:"issueDate"`
+}
+
+type CoffeeAsset struct {
+	UUID        string  `json:"uuid"`
+	Amount      int     `json:"amount"`
+	Owners      []Owner `json:"owner"`
+	Grower      Owner   `json:"grower"`
+	HarvestDate string  `json:"harvestDate"`
 }
 
 type Account struct {
@@ -216,6 +226,249 @@ func (t *SimpleChaincode) createAccount(stub *shim.ChaincodeStub, args []string)
 	}
 
 }
+
+//**********
+/*
+type CoffeeAsset struct {
+	UUID        string  `json:"uuid"`
+	Amount      int     `json:"amount"`
+	Owners      []Owner `json:"owner"`
+	Grower      Owner   `json:"grower"`
+	HarvestDate string  `json:"harvestDate"`
+}
+*/
+func (t *SimpleChaincode) createCoffeeAsset(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+
+	/*		0
+		json
+	  	{
+			"amount": 10,
+			"owners": [ // This one is not required
+				{
+					"company": "company1",
+					"quantity": 5
+				},
+				{
+					"company": "company3",
+					"quantity": 3
+				},
+				{
+					"company": "company4",
+					"quantity": 2
+				}
+			],
+			"grower":"company2",
+			"harvestDate":"1456161763790"  (current time in milliseconds as a string)
+
+		}
+	*/
+
+	//need one arg
+	if len(args) != 1 {
+		fmt.Println("error invalid arguments")
+		return nil, errors.New("Incorrect number of arguments. Expecting CoffeeAsset record")
+	}
+
+	var coffeeAsset CoffeeAsset
+	//var cp CP
+	var err error
+	var account Account
+
+	fmt.Println("Unmarshalling Coffee Asset")
+	err = json.Unmarshal([]byte(args[0]), &coffeeAsset)
+	if err != nil {
+		fmt.Println("error invalid coffee asset")
+		return nil, errors.New("Invalid coffee asset")
+	}
+
+	//generate the CUSIP
+	//get account prefix
+	fmt.Println("Getting state of - " + accountPrefix + coffeeAsset.Grower.Company)
+	accountBytes, err := stub.GetState(accountPrefix + coffeeAsset.Grower.Company)
+	if err != nil {
+		fmt.Println("Error Getting state of - " + accountPrefix + coffeeAsset.Grower.Company)
+		return nil, errors.New("Error retrieving account " + coffeeAsset.Grower.Company)
+	}
+	err = json.Unmarshal(accountBytes, &account)
+	if err != nil {
+		fmt.Println("Error Unmarshalling accountBytes")
+		return nil, errors.New("Error retrieving account " + coffeeAsset.Grower.Company)
+	}
+
+	account.AssetsIds = append(account.AssetsIds, coffeeAsset.UUID)
+
+	// Set the Grower to be the owner of all quantity
+	var owner Owner
+	owner.Company = coffeeAsset.Grower.Company
+	owner.Quantity = coffeeAsset.Amount
+
+	coffeeAsset.Owners = append(coffeeAsset.Owners, owner)
+
+	// suffix, err := generateCUSIPSuffix(cp.IssueDate, cp.Maturity)
+	suffix := uuid.NewV4()
+	// if err != nil {
+	// 	fmt.Println("Error generating cusip")
+	// 	return nil, errors.New("Error generating CUSIP")
+	// }
+
+	fmt.Println("Marshalling coffee asset bytes")
+	coffeeAsset.UUID = account.Prefix + suffix.String()
+
+	fmt.Println("Getting State on Coffee Asset " + coffeeAsset.UUID)
+	coffeeAssetRxBytes, err := stub.GetState(coffeeAssetPrefix + coffeeAsset.UUID)
+	if coffeeAssetRxBytes == nil {
+		fmt.Println("Coffee Asset does not exist, creating it")
+		coffeeAssetBytes, err := json.Marshal(&coffeeAsset)
+		if err != nil {
+			fmt.Println("Error marshalling coffee asset")
+			return nil, errors.New("Error creating coffee asset")
+		}
+		err = stub.PutState(coffeeAssetPrefix+coffeeAsset.UUID, coffeeAssetBytes)
+		if err != nil {
+			fmt.Println("Error creating coffee asset")
+			return nil, errors.New("Error creating coffee asset")
+		}
+
+		fmt.Println("Marshalling account bytes to write")
+		accountBytesToWrite, err := json.Marshal(&account)
+		if err != nil {
+			fmt.Println("Error marshalling account")
+			return nil, errors.New("Error creating coffee asset")
+		}
+		err = stub.PutState(accountPrefix+coffeeAsset.Grower.Company, accountBytesToWrite)
+		if err != nil {
+			fmt.Println("Error putting state on accountBytesToWrite")
+			return nil, errors.New("Error creating coffee asset")
+		}
+
+		// Update the paper keys by adding the new key
+		fmt.Println("Getting Coffee Asset Keys")
+		keysBytes, err := stub.GetState("CoffeeAssetKeys")
+		if err != nil {
+			fmt.Println("Error retrieving coffee asset keys")
+			return nil, errors.New("Error retrieving coffee asset keys")
+		}
+		var keys []string
+		err = json.Unmarshal(keysBytes, &keys)
+		if err != nil {
+			fmt.Println("Error unmarshel keys")
+			return nil, errors.New("Error unmarshalling coffee asset keys ")
+		}
+
+		fmt.Println("Appending the new key to Coffee Asset Keys")
+		foundKey := false
+		for _, key := range keys {
+			if key == coffeeAssetPrefix+coffeeAsset.UUID {
+				foundKey = true
+			}
+		}
+		if foundKey == false {
+			keys = append(keys, coffeeAssetPrefix+coffeeAsset.UUID)
+			keysBytesToWrite, err := json.Marshal(&keys)
+			if err != nil {
+				fmt.Println("Error marshalling keys")
+				return nil, errors.New("Error marshalling the keys")
+			}
+			fmt.Println("Put state on CoffeeAssetKeys")
+			err = stub.PutState("CoffeeAssetKeys", keysBytesToWrite)
+			if err != nil {
+				fmt.Println("Error writting keys back")
+				return nil, errors.New("Error writing the keys back")
+			}
+		}
+
+		fmt.Println("Create Coffee Asset %+v\n", coffeeAsset)
+		return nil, nil
+	} else {
+		fmt.Println("Coffee Asset exists")
+
+		var coffeeAssetRx CoffeeAsset
+		fmt.Println("Unmarshalling coffee asset " + coffeeAsset.UUID)
+		err = json.Unmarshal(coffeeAssetRxBytes, &coffeeAssetRx)
+		if err != nil {
+			fmt.Println("Error unmarshalling coffee Asset" + coffeeAsset.UUID)
+			return nil, errors.New("Error unmarshalling cp " + coffeeAsset.UUID)
+		}
+
+		coffeeAsset.Amount = coffeeAssetRx.Amount + coffeeAsset.Amount
+
+		for key, val := range coffeeAssetRx.Owners {
+			if val.Company == coffeeAsset.Grower.Company {
+				coffeeAssetRx.Owners[key].Quantity += coffeeAsset.Amount
+				break
+			}
+		}
+
+		coffeeAssetWriteBytes, err := json.Marshal(&coffeeAssetRx)
+		if err != nil {
+			fmt.Println("Error marshalling coffee asset")
+			return nil, errors.New("Error creating coffee asset")
+		}
+		err = stub.PutState(coffeeAssetPrefix+coffeeAsset.UUID, coffeeAssetWriteBytes)
+		if err != nil {
+			fmt.Println("Error creating new coffee asset")
+			return nil, errors.New("Error creating new coffee asset")
+		}
+
+		fmt.Println("Updated coffee asset %+v\n", coffeeAssetRx)
+		return nil, nil
+	}
+}
+
+func GetAllCoffeeAssets(stub *shim.ChaincodeStub) ([]CoffeeAsset, error) {
+
+	var allcoffeeAssets []CoffeeAsset
+
+	// Get list of all the keys
+	keysBytes, err := stub.GetState("CoffeeAssetKeys")
+	if err != nil {
+		fmt.Println("Error retrieving coffee asset keys")
+		return nil, errors.New("Error retrieving coffee asset keys")
+	}
+	var keys []string
+	err = json.Unmarshal(keysBytes, &keys)
+	if err != nil {
+		fmt.Println("Error unmarshalling coffee asset keys")
+		return nil, errors.New("Error unmarshalling coffee asset keys")
+	}
+
+	// Get all the coffee assets
+	for _, value := range keys {
+		coffeeAssetBytes, err := stub.GetState(value)
+
+		var coffeeAsset CoffeeAsset
+		err = json.Unmarshal(coffeeAssetBytes, &coffeeAsset)
+		if err != nil {
+			fmt.Println("Error retrieving coffee asset " + value)
+			return nil, errors.New("Error retrieving coffee asset " + value)
+		}
+
+		fmt.Println("Appending coffee Asset " + value)
+		allcoffeeAssets = append(allcoffeeAssets, coffeeAsset)
+	}
+
+	return allcoffeeAssets, nil
+}
+
+func GetCoffeeAsset(coffeeAssetId string, stub *shim.ChaincodeStub) (CoffeeAsset, error) {
+	var coffeeAsset CoffeeAsset
+
+	coffeeAssetBytes, err := stub.GetState(coffeeAssetId)
+	if err != nil {
+		fmt.Println("Error retrieving coffee asset " + coffeeAssetId)
+		return coffeeAsset, errors.New("Error retrieving cp " + coffeeAssetId)
+	}
+
+	err = json.Unmarshal(coffeeAssetBytes, &coffeeAsset)
+	if err != nil {
+		fmt.Println("Error unmarshalling coffee asset " + coffeeAssetId)
+		return coffeeAsset, errors.New("Error unmarshalling coffee asset " + coffeeAssetId)
+	}
+
+	return coffeeAsset, nil
+}
+
+//*******
 
 func (t *SimpleChaincode) issueCommercialPaper(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 
@@ -468,6 +721,185 @@ func GetCompany(companyID string, stub *shim.ChaincodeStub) (Account, error) {
 }
 
 // Still working on this one
+func (t *SimpleChaincode) transferCoffeeAsset(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+	/*		0
+		json
+	  	{
+			  "CUSIP": "",
+			  "fromCompany":"",
+			  "toCompany":"",
+			  "quantity": 1
+		}
+	*/
+	//need one arg
+	if len(args) != 1 {
+		return nil, errors.New("Incorrect number of arguments. Expecting coffee asset record")
+	}
+
+	var tr Transaction
+
+	fmt.Println("Unmarshalling Transaction")
+	err := json.Unmarshal([]byte(args[0]), &tr)
+	if err != nil {
+		fmt.Println("Error Unmarshalling Transaction")
+		return nil, errors.New("Invalid coffee asset")
+	}
+
+	fmt.Println("Getting State on Coffee Asset " + tr.CUSIP)
+	coffeeAssetBytes, err := stub.GetState(coffeeAssetPrefix + tr.CUSIP)
+	if err != nil {
+		fmt.Println("CUSIP not found")
+		return nil, errors.New("CUSIP not found " + tr.CUSIP)
+	}
+
+	var coffeeAsset CoffeeAsset
+	fmt.Println("Unmarshalling Coffee Asset " + tr.CUSIP)
+	err = json.Unmarshal(coffeeAssetBytes, &coffeeAsset)
+	if err != nil {
+		fmt.Println("Error unmarshalling coffeeAsset " + tr.CUSIP)
+		return nil, errors.New("Error unmarshalling coffeeAsset " + tr.CUSIP)
+	}
+
+	var fromCompany Account
+	fmt.Println("Getting State on fromCompany " + tr.FromCompany)
+	fromCompanyBytes, err := stub.GetState(accountPrefix + tr.FromCompany)
+	if err != nil {
+		fmt.Println("Account not found " + tr.FromCompany)
+		return nil, errors.New("Account not found " + tr.FromCompany)
+	}
+
+	fmt.Println("Unmarshalling FromCompany ")
+	err = json.Unmarshal(fromCompanyBytes, &fromCompany)
+	if err != nil {
+		fmt.Println("Error unmarshalling account " + tr.FromCompany)
+		return nil, errors.New("Error unmarshalling account " + tr.FromCompany)
+	}
+
+	var toCompany Account
+	fmt.Println("Getting State on ToCompany " + tr.ToCompany)
+	toCompanyBytes, err := stub.GetState(accountPrefix + tr.ToCompany)
+	if err != nil {
+		fmt.Println("Account not found " + tr.ToCompany)
+		return nil, errors.New("Account not found " + tr.ToCompany)
+	}
+
+	fmt.Println("Unmarshalling tocompany")
+	err = json.Unmarshal(toCompanyBytes, &toCompany)
+	if err != nil {
+		fmt.Println("Error unmarshalling account " + tr.ToCompany)
+		return nil, errors.New("Error unmarshalling account " + tr.ToCompany)
+	}
+
+	// Check for all the possible errors
+	ownerFound := false
+	quantity := 0
+	for _, owner := range cp.Owners {
+		if owner.Company == tr.FromCompany {
+			ownerFound = true
+			quantity = owner.Quantity
+		}
+	}
+
+	// If fromCompany doesn't own this coffee asset
+	if ownerFound == false {
+		fmt.Println("The company " + tr.FromCompany + "doesn't own any of this coffee asset")
+		return nil, errors.New("The company " + tr.FromCompany + "doesn't own any of this coffee asset")
+	} else {
+		fmt.Println("The FromCompany does own this coffee asset")
+	}
+
+	// If fromCompany doesn't own enough quantity of this coffee asset
+	if quantity < tr.Quantity {
+		fmt.Println("The company " + tr.FromCompany + "doesn't own enough of this coffee asset")
+		return nil, errors.New("The company " + tr.FromCompany + "doesn't own enough of this coffee asset")
+	} else {
+		fmt.Println("The FromCompany owns enough of this coffee asset")
+	}
+
+	amountToBeTransferred := float64(tr.Quantity) // * cp.Par
+	//amountToBeTransferred -= (amountToBeTransferred) * (cp.Discount / 100.0) * (float64(cp.Maturity) / 360.0)
+
+	// If toCompany doesn't have enough cash to buy the papers
+	if toCompany.CashBalance < amountToBeTransferred {
+		fmt.Println("The company " + tr.ToCompany + "doesn't have enough cash to purchase the coffee asset")
+		return nil, errors.New("The company " + tr.ToCompany + "doesn't have enough cash to purchase the coffee asset")
+	} else {
+		fmt.Println("The ToCompany has enough money to be transferred for this coffee asset")
+	}
+
+	toCompany.CashBalance -= amountToBeTransferred
+	fromCompany.CashBalance += amountToBeTransferred
+
+	toOwnerFound := false
+	for key, owner := range cp.Owners {
+		if owner.Company == tr.FromCompany {
+			fmt.Println("Reducing Quantity from the FromCompany")
+			cp.Owners[key].Quantity -= tr.Quantity
+			//			owner.Quantity -= tr.Quantity
+		}
+		if owner.Company == tr.ToCompany {
+			fmt.Println("Increasing Quantity from the ToCompany")
+			toOwnerFound = true
+			cp.Owners[key].Quantity += tr.Quantity
+			//			owner.Quantity += tr.Quantity
+		}
+	}
+
+	if toOwnerFound == false {
+		var newOwner Owner
+		fmt.Println("As ToOwner was not found, appending the owner to the Coffee Asset")
+		newOwner.Quantity = tr.Quantity
+		newOwner.Company = tr.ToCompany
+		cp.Owners = append(cp.Owners, newOwner)
+	}
+
+	fromCompany.AssetsIds = append(fromCompany.AssetsIds, tr.CUSIP)
+
+	// Write everything back
+	// To Company
+	toCompanyBytesToWrite, err := json.Marshal(&toCompany)
+	if err != nil {
+		fmt.Println("Error marshalling the toCompany")
+		return nil, errors.New("Error marshalling the toCompany")
+	}
+	fmt.Println("Put state on toCompany")
+	err = stub.PutState(accountPrefix+tr.ToCompany, toCompanyBytesToWrite)
+	if err != nil {
+		fmt.Println("Error writing the toCompany back")
+		return nil, errors.New("Error writing the toCompany back")
+	}
+
+	// From company
+	fromCompanyBytesToWrite, err := json.Marshal(&fromCompany)
+	if err != nil {
+		fmt.Println("Error marshalling the fromCompany")
+		return nil, errors.New("Error marshalling the fromCompany")
+	}
+	fmt.Println("Put state on fromCompany")
+	err = stub.PutState(accountPrefix+tr.FromCompany, fromCompanyBytesToWrite)
+	if err != nil {
+		fmt.Println("Error writing the fromCompany back")
+		return nil, errors.New("Error writing the fromCompany back")
+	}
+
+	// coffeeAsset
+	coffeeAssetBytesToWrite, err := json.Marshal(&coffeeAsset)
+	if err != nil {
+		fmt.Println("Error marshalling the coffeeAsset")
+		return nil, errors.New("Error marshalling the coffeeAsset")
+	}
+	fmt.Println("Put state on coffeeAsset")
+	err = stub.PutState(coffeeAssetPrefix+tr.CUSIP, coffeeAssetBytesToWrite)
+	if err != nil {
+		fmt.Println("Error writing the coffeeAsset back")
+		return nil, errors.New("Error writing the coffeeAsset back")
+	}
+
+	fmt.Println("Successfully completed Invoke")
+	return nil, nil
+}
+
+// Still working on this one
 func (t *SimpleChaincode) transferPaper(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	/*		0
 		json
@@ -652,7 +1084,37 @@ func (t *SimpleChaincode) Query(stub *shim.ChaincodeStub, function string, args 
 		return nil, errors.New("Incorrect number of arguments. Expecting ......")
 	}
 
-	if args[0] == "GetAllCPs" {
+	if args[0] == "GetAllCoffeeAssets" {
+		fmt.Println("Getting all coffee assets")
+		allcoffeeAssets, err := GetAllCoffeeAssets(stub)
+		if err != nil {
+			fmt.Println("Error from GetAllCoffeeAssets")
+			return nil, err
+		} else {
+			allcoffeeAssetBytes, err1 := json.Marshal(&allcoffeeAssets)
+			if err1 != nil {
+				fmt.Println("Error marshalling allcoffeeAssets")
+				return nil, err1
+			}
+			fmt.Println("All success, returning allcoffeeAssets")
+			return allcoffeeAssetBytes, nil
+		}
+	} else if args[0] == "GetCoffeeAsset" {
+		fmt.Println("Getting particular coffee asset")
+		coffeeAsset, err := GetCoffeeAsset(args[1], stub)
+		if err != nil {
+			fmt.Println("Error Getting particular coffeeAsset")
+			return nil, err
+		} else {
+			coffeeAssetBytes, err1 := json.Marshal(&coffeeAsset)
+			if err1 != nil {
+				fmt.Println("Error marshalling the coffeeAsset")
+				return nil, err1
+			}
+			fmt.Println("All success, returning the coffeeAsset")
+			return coffeeAssetBytes, nil
+		}
+	} else if args[0] == "GetAllCPs" {
 		fmt.Println("Getting all CPs")
 		allCPs, err := GetAllCPs(stub)
 		if err != nil {
@@ -719,7 +1181,14 @@ func (t *SimpleChaincode) Run(stub *shim.ChaincodeStub, function string, args []
 func (t *SimpleChaincode) Invoke(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
 	fmt.Println("invoke is running " + function)
 
-	if function == "issueCommercialPaper" {
+	if function == "createCoffeeAsset" {
+		fmt.Println("Firing createCoffeeAsset")
+		//Create an createCoffeeAsset with some value
+		return t.createCoffeeAsset(stub, args)
+	} else if function == "transferCoffeeAsset" {
+		fmt.Println("Firing transferCoffeeAsset")
+		return t.transferCoffeeAsset(stub, args)
+	} else if function == "issueCommercialPaper" {
 		fmt.Println("Firing issueCommercialPaper")
 		//Create an asset with some value
 		return t.issueCommercialPaper(stub, args)
