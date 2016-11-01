@@ -793,7 +793,7 @@ func (t *SimpleChaincode) transferCoffeeAsset(stub *shim.ChaincodeStub, args []s
 	// Check for all the possible errors
 	ownerFound := false
 	quantity := 0
-	for _, owner := range cp.Owners {
+	for _, owner := range coffeeAsset.Owners {
 		if owner.Company == tr.FromCompany {
 			ownerFound = true
 			quantity = owner.Quantity
@@ -831,16 +831,16 @@ func (t *SimpleChaincode) transferCoffeeAsset(stub *shim.ChaincodeStub, args []s
 	fromCompany.CashBalance += amountToBeTransferred
 
 	toOwnerFound := false
-	for key, owner := range cp.Owners {
+	for key, owner := range coffeeAsset.Owners {
 		if owner.Company == tr.FromCompany {
 			fmt.Println("Reducing Quantity from the FromCompany")
-			cp.Owners[key].Quantity -= tr.Quantity
+			coffeeAsset.Owners[key].Quantity -= tr.Quantity
 			//			owner.Quantity -= tr.Quantity
 		}
 		if owner.Company == tr.ToCompany {
 			fmt.Println("Increasing Quantity from the ToCompany")
 			toOwnerFound = true
-			cp.Owners[key].Quantity += tr.Quantity
+			coffeeAsset.Owners[key].Quantity += tr.Quantity
 			//			owner.Quantity += tr.Quantity
 		}
 	}
@@ -850,7 +850,7 @@ func (t *SimpleChaincode) transferCoffeeAsset(stub *shim.ChaincodeStub, args []s
 		fmt.Println("As ToOwner was not found, appending the owner to the Coffee Asset")
 		newOwner.Quantity = tr.Quantity
 		newOwner.Company = tr.ToCompany
-		cp.Owners = append(cp.Owners, newOwner)
+		coffeeAsset.Owners = append(coffeeAsset.Owners, newOwner)
 	}
 
 	fromCompany.AssetsIds = append(fromCompany.AssetsIds, tr.CUSIP)
