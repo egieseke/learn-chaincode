@@ -93,8 +93,8 @@ type CoffeeAsset struct {
 	UUID        string  `json:"uuid"`
 	Amount      int     `json:"amount"`
 	Owners      []Owner `json:"owner"`
-	Grower      Owner   `json:"grower"`
-	HarvestDate string  `json:"harvestDate"`
+	Grower      string  `json:"grower"`
+	HarvestDate int     `json:"harvestDate"`
 }
 
 type Account struct {
@@ -227,6 +227,42 @@ func (t *SimpleChaincode) createAccount(stub *shim.ChaincodeStub, args []string)
 
 }
 
+func (t *SimpleChaincode) testCreateCoffeeAsset(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+
+	var username = "farmer1"
+	var amount = 10
+	var assetIds []string
+	var suffix = "000A"
+	var prefix = username + suffix
+
+	var account = Account{ID: username, Prefix: prefix, CashBalance: 10000000.0, AssetsIds: assetIds}
+	var owners = []Owner{{
+		Company:  username,
+		Quantity: amount}}
+	var coffeeAsset = CoffeeAsset{Amount: amount, Owners: owners, Grower: username, HarvestDate: 1456161763790}
+
+	var newAccountArgs []string
+	var newCoffeeAssetArgs []string
+
+	accountBytes, err := json.Marshal(&account)
+	if err != nil {
+		fmt.Println("error marshalling account")
+		return nil, errors.New("Error marshalling account " + account.ID)
+	}
+	coffeeAssetBytes, err := json.Marshal(&coffeeAsset)
+	if err != nil {
+		fmt.Println("error marshalling coffee asset")
+		return nil, errors.New("error marshalling coffee asset " + coffeeAsset.Grower)
+	}
+
+	newAccountArgs[0] = string(accountBytes)
+	t.createAccount(stub, newAccountArgs)
+
+	newCoffeeAssetArgs[0] = string(coffeeAssetBytes)
+	return t.createCoffeeAsset(stub, newCoffeeAssetArgs)
+
+}
+
 //**********
 /*
 type CoffeeAsset struct {
@@ -283,23 +319,23 @@ func (t *SimpleChaincode) createCoffeeAsset(stub *shim.ChaincodeStub, args []str
 
 	//generate the CUSIP
 	//get account prefix
-	fmt.Println("Getting state of - " + accountPrefix + coffeeAsset.Grower.Company)
-	accountBytes, err := stub.GetState(accountPrefix + coffeeAsset.Grower.Company)
+	fmt.Println("Getting state of - " + accountPrefix + coffeeAsset.Grower)
+	accountBytes, err := stub.GetState(accountPrefix + coffeeAsset.Grower)
 	if err != nil {
-		fmt.Println("Error Getting state of - " + accountPrefix + coffeeAsset.Grower.Company)
-		return nil, errors.New("Error retrieving account " + coffeeAsset.Grower.Company)
+		fmt.Println("Error Getting state of - " + accountPrefix + coffeeAsset.Grower)
+		return nil, errors.New("Error retrieving account " + coffeeAsset.Grower)
 	}
 	err = json.Unmarshal(accountBytes, &account)
 	if err != nil {
 		fmt.Println("Error Unmarshalling accountBytes")
-		return nil, errors.New("Error retrieving account " + coffeeAsset.Grower.Company)
+		return nil, errors.New("Error retrieving account " + coffeeAsset.Grower)
 	}
 
 	account.AssetsIds = append(account.AssetsIds, coffeeAsset.UUID)
 
 	// Set the Grower to be the owner of all quantity
 	var owner Owner
-	owner.Company = coffeeAsset.Grower.Company
+	owner.Company = coffeeAsset.Grower
 	owner.Quantity = coffeeAsset.Amount
 
 	coffeeAsset.Owners = append(coffeeAsset.Owners, owner)
@@ -312,7 +348,9 @@ func (t *SimpleChaincode) createCoffeeAsset(stub *shim.ChaincodeStub, args []str
 	// }
 
 	fmt.Println("Marshalling coffee asset bytes")
-	coffeeAsset.UUID = account.Prefix + suffix.String()
+	if coffeeAsset.UUID == "" {
+		coffeeAsset.UUID = suffix.String()
+	}
 
 	fmt.Println("Getting State on Coffee Asset " + coffeeAsset.UUID)
 	coffeeAssetRxBytes, err := stub.GetState(coffeeAssetPrefix + coffeeAsset.UUID)
@@ -335,13 +373,13 @@ func (t *SimpleChaincode) createCoffeeAsset(stub *shim.ChaincodeStub, args []str
 			fmt.Println("Error marshalling account")
 			return nil, errors.New("Error creating coffee asset")
 		}
-		err = stub.PutState(accountPrefix+coffeeAsset.Grower.Company, accountBytesToWrite)
+		err = stub.PutState(accountPrefix+coffeeAsset.Grower, accountBytesToWrite)
 		if err != nil {
 			fmt.Println("Error putting state on accountBytesToWrite")
 			return nil, errors.New("Error creating coffee asset")
 		}
 
-		// Update the paper keys by adding the new key
+		// Update the coffee asset keys by adding the new key
 		fmt.Println("Getting Coffee Asset Keys")
 		keysBytes, err := stub.GetState("CoffeeAssetKeys")
 		if err != nil {
@@ -380,7 +418,7 @@ func (t *SimpleChaincode) createCoffeeAsset(stub *shim.ChaincodeStub, args []str
 		fmt.Println("Create Coffee Asset %+v\n", coffeeAsset)
 		return nil, nil
 	} else {
-		fmt.Println("Coffee Asset exists")
+		fmt.Println("Coffee Asset already exists, update it")
 
 		var coffeeAssetRx CoffeeAsset
 		fmt.Println("Unmarshalling coffee asset " + coffeeAsset.UUID)
@@ -393,7 +431,7 @@ func (t *SimpleChaincode) createCoffeeAsset(stub *shim.ChaincodeStub, args []str
 		coffeeAsset.Amount = coffeeAssetRx.Amount + coffeeAsset.Amount
 
 		for key, val := range coffeeAssetRx.Owners {
-			if val.Company == coffeeAsset.Grower.Company {
+			if val.Company == coffeeAsset.Grower {
 				coffeeAssetRx.Owners[key].Quantity += coffeeAsset.Amount
 				break
 			}
@@ -1201,6 +1239,9 @@ func (t *SimpleChaincode) Invoke(stub *shim.ChaincodeStub, function string, args
 	} else if function == "createAccount" {
 		fmt.Println("Firing createAccount")
 		return t.createAccount(stub, args)
+	} else if function == "testCreateCoffeeAsset" {
+		fmt.Println("Firing testCreateCoffeeAsset")
+		return t.testCreateCoffeeAsset(stub, args)
 	} else if function == "init" {
 		fmt.Println("Firing init")
 		return t.Init(stub, "init", args)
