@@ -1245,6 +1245,9 @@ func (t *SimpleChaincode) Invoke(stub *shim.ChaincodeStub, function string, args
 	} else if function == "init" {
 		fmt.Println("Firing init")
 		return t.Init(stub, "init", args)
+	} else if function == "query" {
+		fmt.Println("Firing query")
+		return t.Query(stub, "query", args)
 	}
 
 	return nil, errors.New("Received unknown function invocation")
