@@ -255,9 +255,11 @@ func (t *SimpleChaincode) testCreateCoffeeAsset(stub *shim.ChaincodeStub, args [
 		return nil, errors.New("error marshalling coffee asset " + coffeeAsset.Grower)
 	}
 
+	// TODO this should be the name of the farmer
 	newAccountArgs[0] = string(accountBytes)
 	t.createAccount(stub, newAccountArgs)
 
+	// now create the coffee asset
 	newCoffeeAssetArgs[0] = string(coffeeAssetBytes)
 	return t.createCoffeeAsset(stub, newCoffeeAssetArgs)
 
@@ -279,7 +281,7 @@ func (t *SimpleChaincode) createCoffeeAsset(stub *shim.ChaincodeStub, args []str
 		json
 	  	{
 			"amount": 10,
-			"owners": [ // This one is not required
+			"owners": [
 				{
 					"company": "company1",
 					"quantity": 5
@@ -352,7 +354,7 @@ func (t *SimpleChaincode) createCoffeeAsset(stub *shim.ChaincodeStub, args []str
 		coffeeAsset.UUID = suffix.String()
 	}
 
-	fmt.Println("Getting State on Coffee Asset " + coffeeAsset.UUID)
+	fmt.Println("Getting State of Coffee Asset " + coffeeAsset.UUID)
 	coffeeAssetRxBytes, err := stub.GetState(coffeeAssetPrefix + coffeeAsset.UUID)
 	if coffeeAssetRxBytes == nil {
 		fmt.Println("Coffee Asset does not exist, creating it")
@@ -758,7 +760,9 @@ func GetCompany(companyID string, stub *shim.ChaincodeStub) (Account, error) {
 	return company, nil
 }
 
-// Still working on this one
+/*
+*	Transfer coffee asset from one owner to another
+ */
 func (t *SimpleChaincode) transferCoffeeAsset(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	/*		0
 		json
@@ -771,7 +775,7 @@ func (t *SimpleChaincode) transferCoffeeAsset(stub *shim.ChaincodeStub, args []s
 	*/
 	//need one arg
 	if len(args) != 1 {
-		return nil, errors.New("Incorrect number of arguments. Expecting coffee asset record")
+		return nil, errors.New("Incorrect number of arguments. Expecting transaction record")
 	}
 
 	var tr Transaction
