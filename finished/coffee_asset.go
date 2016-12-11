@@ -342,7 +342,7 @@ func (t *SimpleChaincode) createCoffeeAsset(stub shim.ChaincodeStubInterface, ar
 	coffeeAsset.Owners = append(coffeeAsset.Owners, owner)
 
 	// suffix, err := generateCUSIPSuffix(cp.IssueDate, cp.Maturity)
-	suffix := strconv.Itoa(time.Now().UnixNano())
+	suffix := strconv.ParseInt(time.Now().UnixNano(), 10, 64)
 	// if err != nil {
 	// 	fmt.Println("Error generating cusip")
 	// 	return nil, errors.New("Error generating CUSIP")
