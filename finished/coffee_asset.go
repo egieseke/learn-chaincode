@@ -1125,6 +1125,7 @@ func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function strin
 	if len(args) < 1 {
 		return nil, errors.New("Incorrect number of arguments. Expecting ......")
 	}
+	fmt.Println("Starting query operation with " + args)
 
 	if args[0] == "GetAllCoffeeAssets" {
 		fmt.Println("Getting all coffee assets")
