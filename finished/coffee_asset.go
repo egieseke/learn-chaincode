@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/hyperledger/fabric/core/chaincode/shim"
-	uuid "github.com/satori/go.uuid"
 )
 
 var cpPrefix = "cp:"
@@ -343,7 +342,7 @@ func (t *SimpleChaincode) createCoffeeAsset(stub shim.ChaincodeStubInterface, ar
 	coffeeAsset.Owners = append(coffeeAsset.Owners, owner)
 
 	// suffix, err := generateCUSIPSuffix(cp.IssueDate, cp.Maturity)
-	suffix := uuid.NewV4()
+	suffix := time.Now().UnixNano()
 	// if err != nil {
 	// 	fmt.Println("Error generating cusip")
 	// 	return nil, errors.New("Error generating CUSIP")
