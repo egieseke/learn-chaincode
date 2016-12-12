@@ -350,7 +350,7 @@ func (t *SimpleChaincode) createCoffeeAsset(stub shim.ChaincodeStubInterface, ar
 
 	fmt.Println("Marshalling coffee asset bytes")
 	if coffeeAsset.UUID == "" {
-		coffeeAsset.UUID = suffix.String()
+		coffeeAsset.UUID = suffix
 	}
 
 	fmt.Println("Getting State of Coffee Asset " + coffeeAsset.UUID)
