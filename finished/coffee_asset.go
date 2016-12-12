@@ -255,13 +255,6 @@ func (t *SimpleChaincode) testCreateCoffeeAsset(stub shim.ChaincodeStubInterface
 		Company:  username,
 		Quantity: amount}}
 
-	type CoffeeAsset struct {
-		UUID        string  `json:"uuid"`
-		Amount      int     `json:"amount"`
-		Owners      []Owner `json:"owner"`
-		Grower      string  `json:"grower"`
-		HarvestDate int     `json:"harvestDate"`
-	}
 	var coffeeAsset = CoffeeAsset{UUID: coffeeUUID, Amount: amount, Owners: owners, Grower: username, HarvestDate: 1456161763790}
 
 	var newAccountArgs [1]string
