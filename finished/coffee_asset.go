@@ -248,12 +248,21 @@ func (t *SimpleChaincode) testCreateCoffeeAsset(stub shim.ChaincodeStubInterface
 	var assetIds []string
 	var suffix = "000A"
 	var prefix = username + suffix
+	var coffeeUUID = "testAsset"
 
 	var account = Account{ID: username, Prefix: prefix, CashBalance: 10000000.0, AssetsIds: assetIds}
 	var owners = []Owner{{
 		Company:  username,
 		Quantity: amount}}
-	var coffeeAsset = CoffeeAsset{Amount: amount, Owners: owners, Grower: username, HarvestDate: 1456161763790}
+
+	type CoffeeAsset struct {
+		UUID        string  `json:"uuid"`
+		Amount      int     `json:"amount"`
+		Owners      []Owner `json:"owner"`
+		Grower      string  `json:"grower"`
+		HarvestDate int     `json:"harvestDate"`
+	}
+	var coffeeAsset = CoffeeAsset{UUID: coffeeUUID, Amount: amount, Owners: owners, Grower: username, HarvestDate: 1456161763790}
 
 	var newAccountArgs [1]string
 	var newCoffeeAssetArgs [1]string
