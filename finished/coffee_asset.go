@@ -255,8 +255,8 @@ func (t *SimpleChaincode) testCreateCoffeeAsset(stub shim.ChaincodeStubInterface
 		Quantity: amount}}
 	var coffeeAsset = CoffeeAsset{Amount: amount, Owners: owners, Grower: username, HarvestDate: 1456161763790}
 
-	var newAccountArgs []string
-	var newCoffeeAssetArgs []string
+	var newAccountArgs [1]string
+	var newCoffeeAssetArgs [1]string
 
 	accountBytes, err := json.Marshal(&account)
 	if err != nil {
