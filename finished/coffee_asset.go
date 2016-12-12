@@ -274,7 +274,7 @@ func (t *SimpleChaincode) testCreateCoffeeAsset(stub shim.ChaincodeStubInterface
 	t.createAccount(stub, newAccountArgs)
 
 	// now create the coffee asset
-	newCoffeeAssetArgs[0] = string(coffeeAssetBytes)
+	newCoffeeAssetArgs[0] = fmt.Sprintf("%s", coffeeAssetBytes)
 	return t.createCoffeeAsset(stub, newCoffeeAssetArgs)
 
 }
