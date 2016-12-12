@@ -278,9 +278,9 @@ func (t *SimpleChaincode) testCreateCoffeeAsset(stub shim.ChaincodeStubInterface
 	t.createAccount(stub, newAccountArgsArray)
 
 	// now create the coffee asset
-	newCoffeeAssetArgs[0] = fmt.Sprintf("%s", coffeeAssetBytes)
-	newCoffeeAssetArgsArray := newCoffeeAssetArgs[:]
-	return t.createCoffeeAsset(stub, newCoffeeAssetArgsArray)
+	// newCoffeeAssetArgs[0] = fmt.Sprintf("%s", coffeeAssetBytes)
+	// newCoffeeAssetArgsArray := newCoffeeAssetArgs[:]
+	// return t.createCoffeeAsset(stub, newCoffeeAssetArgsArray)
 
 }
 
@@ -295,30 +295,6 @@ type CoffeeAsset struct {
 }
 */
 func (t *SimpleChaincode) createCoffeeAsset(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
-
-	/*		0
-		json
-	  	{
-			"amount": 10,
-			"owners": [
-				{
-					"company": "company1",
-					"quantity": 5
-				},
-				{
-					"company": "company3",
-					"quantity": 3
-				},
-				{
-					"company": "company4",
-					"quantity": 2
-				}
-			],
-			"grower":"company2",
-			"harvestDate":"1456161763790"  (current time in milliseconds as a string)
-
-		}
-	*/
 
 	//need one arg
 	if len(args) != 1 {
