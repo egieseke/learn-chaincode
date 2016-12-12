@@ -255,7 +255,7 @@ func (t *SimpleChaincode) testCreateCoffeeAsset(stub shim.ChaincodeStubInterface
 	}
 
 	// TODO this should be the name of the farmer
-	newAccountArgs[0] = accountBytes
+	newAccountArgs[0] = BytesToString(accountBytes)
 	t.createAccount(stub, newAccountArgs)
 
 	// now create the coffee asset
