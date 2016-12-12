@@ -279,6 +279,7 @@ func (t *SimpleChaincode) testCreateCoffeeAsset(stub shim.ChaincodeStubInterface
 	newCoffeeAssetArgs[0] = fmt.Sprintf("%s", coffeeAssetBytes)
 	newCoffeeAssetArgsArray := newCoffeeAssetArgs[:]
 
+	fmt.Println("coffee Asset " + newCoffeeAssetArgsArray)
 	return t.createAccount(stub, newAccountArgsArray)
 
 	//  response = t.createCoffeeAsset(stub, newCoffeeAssetArgsArray)
