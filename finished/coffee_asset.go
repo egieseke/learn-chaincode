@@ -271,12 +271,13 @@ func (t *SimpleChaincode) testCreateCoffeeAsset(stub shim.ChaincodeStubInterface
 
 	// TODO this should be the name of the farmer
 	newAccountArgs[0] = fmt.Sprintf("%s", accountBytes)
-	var newAccountArgsArray []string = newAccountArgs
+	newAccountArgsArray := []string(newAccountArgs)
+
 	t.createAccount(stub, newAccountArgsArray)
 
 	// now create the coffee asset
 	newCoffeeAssetArgs[0] = fmt.Sprintf("%s", coffeeAssetBytes)
-	var newCoffeeAssetArgsArray []string = newCoffeeAssetArgs
+	newCoffeeAssetArgsArray := []string(newCoffeeAssetArgs)
 	return t.createCoffeeAsset(stub, newCoffeeAssetArgsArray)
 
 }
