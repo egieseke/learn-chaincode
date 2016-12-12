@@ -275,12 +275,12 @@ func (t *SimpleChaincode) testCreateCoffeeAsset(stub shim.ChaincodeStubInterface
 	newAccountArgs[0] = fmt.Sprintf("%s", accountBytes)
 	newAccountArgsArray := newAccountArgs[:]
 
-	t.createAccount(stub, newAccountArgsArray)
+	return t.createAccount(stub, newAccountArgsArray)
 
 	// now create the coffee asset
 	// newCoffeeAssetArgs[0] = fmt.Sprintf("%s", coffeeAssetBytes)
 	// newCoffeeAssetArgsArray := newCoffeeAssetArgs[:]
-	// return t.createCoffeeAsset(stub, newCoffeeAssetArgsArray)
+	//  return t.createCoffeeAsset(stub, newCoffeeAssetArgsArray)
 
 }
 
