@@ -288,7 +288,7 @@ func (t *SimpleChaincode) testCreateCoffeeAsset(stub shim.ChaincodeStubInterface
 
 	fmt.Println("successfully created coffee asset " + newCoffeeAssetArgsArray[0])
 
-	return nil, respose
+	return nil, nil
 }
 
 //**********
