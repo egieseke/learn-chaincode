@@ -284,11 +284,11 @@ func (t *SimpleChaincode) testCreateCoffeeAsset(stub shim.ChaincodeStubInterface
 	t.createAccount(stub, newAccountArgsArray)
 
 	fmt.Println("creating coffee asset " + newCoffeeAssetArgsArray[0])
-	var response = t.createCoffeeAsset(stub, newCoffeeAssetArgsArray)
+	coffeeAssetResponse, err := t.createCoffeeAsset(stub, newCoffeeAssetArgsArray)
 
 	fmt.Println("successfully created coffee asset " + newCoffeeAssetArgsArray[0])
 
-	return nil, nil
+	return coffeeAssetResponse, err
 }
 
 //**********
