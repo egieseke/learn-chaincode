@@ -249,13 +249,14 @@ func (t *SimpleChaincode) testCreateCoffeeAsset(stub shim.ChaincodeStubInterface
 	var suffix = "000A"
 	var prefix = username + suffix
 	var coffeeUUID = "testAsset"
+	var grower = prefix
 
-	var account = Account{ID: username, Prefix: prefix, CashBalance: 10000000.0, AssetsIds: assetIds}
+	var account = Account{ID: username, Prefix: grower, CashBalance: 10000000.0, AssetsIds: assetIds}
 	var owners = []Owner{{
 		Company:  username,
 		Quantity: amount}}
 
-	var coffeeAsset = CoffeeAsset{UUID: coffeeUUID, Amount: amount, Owners: owners, Grower: username, HarvestDate: 1456161763790}
+	var coffeeAsset = CoffeeAsset{UUID: coffeeUUID, Amount: amount, Owners: owners, Grower: grower, HarvestDate: 1456161763790}
 
 	var newAccountArgs [1]string
 	var newCoffeeAssetArgs [1]string
@@ -279,11 +280,15 @@ func (t *SimpleChaincode) testCreateCoffeeAsset(stub shim.ChaincodeStubInterface
 	newCoffeeAssetArgs[0] = fmt.Sprintf("%s", coffeeAssetBytes)
 	newCoffeeAssetArgsArray := newCoffeeAssetArgs[:]
 
-	fmt.Println("coffee Asset " + newCoffeeAssetArgsArray[0])
-	return t.createAccount(stub, newAccountArgsArray)
+	fmt.Println("creating account " + newAccountArgsArray[0])
+	t.createAccount(stub, newAccountArgsArray)
 
-	//  response = t.createCoffeeAsset(stub, newCoffeeAssetArgsArray)
+	fmt.Println("creating coffee asset " + newCoffeeAssetArgsArray[0])
+	response = t.createCoffeeAsset(stub, newCoffeeAssetArgsArray)
 
+	fmt.Println("successfully created coffee asset " + newCoffeeAssetArgsArray[0])
+
+	return nil, respose
 }
 
 //**********
@@ -304,6 +309,8 @@ func (t *SimpleChaincode) createCoffeeAsset(stub shim.ChaincodeStubInterface, ar
 		return nil, errors.New("Incorrect number of arguments. Expecting CoffeeAsset record")
 	}
 
+	fmt.Println("processing createCoffeeAsset " + args[0])
+
 	var coffeeAsset CoffeeAsset
 	//var cp CP
 	var err error
@@ -318,10 +325,10 @@ func (t *SimpleChaincode) createCoffeeAsset(stub shim.ChaincodeStubInterface, ar
 
 	//generate the CUSIP
 	//get account prefix
-	fmt.Println("Getting state of - " + accountPrefix + coffeeAsset.Grower)
-	accountBytes, err := stub.GetState(accountPrefix + coffeeAsset.Grower)
+	fmt.Println("Getting state of - " + coffeeAsset.Grower)
+	accountBytes, err := stub.GetState(coffeeAsset.Grower)
 	if err != nil {
-		fmt.Println("Error Getting state of - " + accountPrefix + coffeeAsset.Grower)
+		fmt.Println("Error Getting state of - " + coffeeAsset.Grower)
 		return nil, errors.New("Error retrieving account " + coffeeAsset.Grower)
 	}
 	err = json.Unmarshal(accountBytes, &account)
